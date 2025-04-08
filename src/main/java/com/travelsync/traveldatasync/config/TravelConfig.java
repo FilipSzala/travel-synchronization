@@ -53,8 +53,8 @@ public class TravelConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
+                .formLogin(formLogin -> formLogin.permitAll())
                 .cors(cors -> cors.configure(http))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(SECURED_URLS.toArray(String[]::new))
                         .authenticated().anyRequest().permitAll());
         http.authenticationProvider(authenticationProvider());

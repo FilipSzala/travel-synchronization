@@ -2,12 +2,14 @@ package com.travelsync.traveldatasync.model.trip.trip_location;
 
 import com.travelsync.traveldatasync.model.trip.Trip;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
+@Setter
+@Builder
 public class TripLocation {
     @Id
     @GeneratedValue (strategy = GenerationType.IDENTITY)
@@ -23,4 +25,5 @@ public class TripLocation {
                     (name = "tripLocation_trip_fk")
     )
     private Trip trip;
+
 }

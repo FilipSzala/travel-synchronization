@@ -6,16 +6,18 @@ import com.travelsync.traveldatasync.model.trip.trip_category.TripCategory;
 import com.travelsync.traveldatasync.model.trip.trip_location.TripLocation;
 import com.travelsync.traveldatasync.model.user.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
+@Setter
+@Getter
 
 public class Trip {
     @Id
@@ -23,12 +25,12 @@ public class Trip {
     private Long id;
     private String title;
     private String description;
-    private Date startDate;
-    private Date endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private int maxParticipantCount;
     private int currentParticipantCount;
     private BigDecimal price;
-    @OneToOne ( mappedBy = "trip")
+    @OneToOne ( mappedBy = "trip", cascade = CascadeType.ALL)
     private TripLocation location;
     @Enumerated
     private TripCategory tripCategory;
@@ -40,7 +42,7 @@ public class Trip {
     private User user;
     @ManyToOne
     @JoinColumn (
-            name = "reservvation_history_id",
+            name = "reservation_history_id",
             foreignKey = @ForeignKey (name = "reservation_history_fk")
     )
     private ReservationHistory reservationHistory;

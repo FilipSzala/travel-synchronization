@@ -3,10 +3,16 @@ package com.travelsync.traveldatasync.model.user;
 import com.travelsync.traveldatasync.model.user.request.AddUserRequest;
 import com.travelsync.traveldatasync.model.user.response.UserResponseDto;
 import jakarta.persistence.EntityExistsException;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +38,7 @@ public class UserService implements IUserService{
                 .phoneNumber(addUserRequest.getPhoneNumber())
                 .email(addUserRequest.getEmail())
                 .password(passwordEncoder.encode(addUserRequest.getPassword()))
-                .role("USER")
+                .role("TOUR-OPERATOR")
                 .build();
     }
     @Override
@@ -41,5 +47,33 @@ public class UserService implements IUserService{
         return userDto;
     }
 
+    @Override
+    public List<String> findAllCompanyNames() {
+        List<User> users = userRepository.findAll();
+        List<String> companyNames = users.stream().map(User:: getCompanyName).collect(Collectors.toUnmodifiableList());
+        return companyNames;
+    }
 
+    @Override
+    public User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new EntityNotFoundException("User not authenticated");
+        }
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found for email: " + email));
+    }
+
+    @Override
+    public User findByFullName(String fullName) {
+        return userRepository.findByFullName(fullName)
+                .orElseThrow(() -> new EntityNotFoundException ("User : " +fullName + " doesn't exist"));
+    }
+
+    @Override
+    public User findById(Long userId) {
+        return userRepository.findById(userId).orElseThrow(() ->
+                new EntityNotFoundException("User id :" + userId + " doesn't exist"));
+    }
 }
