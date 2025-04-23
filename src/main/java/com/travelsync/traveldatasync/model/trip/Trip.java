@@ -1,5 +1,4 @@
 package com.travelsync.traveldatasync.model.trip;
-
 import com.travelsync.traveldatasync.model.booking.Booking;
 import com.travelsync.traveldatasync.model.reservation_history.ReservationHistory;
 import com.travelsync.traveldatasync.model.trip.trip_category.TripCategory;
@@ -7,7 +6,6 @@ import com.travelsync.traveldatasync.model.trip.trip_location.TripLocation;
 import com.travelsync.traveldatasync.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -40,12 +38,10 @@ public class Trip {
             foreignKey = @ForeignKey (name = "trip_user_fk")
     )
     private User user;
-    @ManyToOne
-    @JoinColumn (
-            name = "reservation_history_id",
-            foreignKey = @ForeignKey (name = "reservation_history_fk")
+    @ManyToMany (
+            mappedBy = "trips"
     )
-    private ReservationHistory reservationHistory;
+    private List <ReservationHistory> reservationHistories;
     @OneToMany
     private List<Booking> bookings;
 }

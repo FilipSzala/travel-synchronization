@@ -25,7 +25,8 @@ public class User {
     @NaturalId
     private String email;
     private String password;
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
     @OneToMany (
             mappedBy = "user"
     )

@@ -1,6 +1,7 @@
 package com.travelsync.traveldatasync.model.trip;
-
-import com.travelsync.traveldatasync.model.reservation_history.ReservationHistory;
+import com.travelsync.traveldatasync.model.email.EmailService;
+import com.travelsync.traveldatasync.model.notification.NotificationService;
+import com.travelsync.traveldatasync.model.reservation_history.ReservationHistoryService;
 import com.travelsync.traveldatasync.model.trip.request.AddTripRequest;
 import com.travelsync.traveldatasync.model.trip.request.TripAvailabilityRequest;
 import com.travelsync.traveldatasync.model.trip.request.UpdateTripRequest;
@@ -8,13 +9,16 @@ import com.travelsync.traveldatasync.model.trip.trip_location.TripLocation;
 import com.travelsync.traveldatasync.model.trip.trip_location.TripRepository;
 import com.travelsync.traveldatasync.model.user.User;
 import com.travelsync.traveldatasync.model.user.UserRepository;
+import com.travelsync.traveldatasync.model.user.UserRole;
 import com.travelsync.traveldatasync.model.user.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.stream.IntStream;
@@ -26,6 +30,9 @@ public class TripService implements ITripService {
     private final UserService userService;
     private final TripRepository tripRepository;
     private final ModelMapper modelMapper;
+    private final EmailService emailService;
+    private final NotificationService notificationService;
+    private final ReservationHistoryService reservationService;
 
     @Override
     public Trip addTrip(AddTripRequest tripRequest) {
@@ -52,9 +59,9 @@ public class TripService implements ITripService {
 
     private void assignOrganizerBasedOnUserRole(Trip trip, AddTripRequest addTripRequest) {
         User loggedUser = userService.getAuthenticatedUser();
-        if ("TOUR-OPERATOR".equals(loggedUser.getRole())) {
+        if (UserRole.TOUR_OPERATOR.equals(loggedUser.getRole())) {
             trip.setUser(loggedUser);
-        } else if ("ADMIN".equals(loggedUser.getRole())) {
+        } else if (UserRole.ADMIN.equals(loggedUser.getRole())) {
             String companyName = addTripRequest.getUserCompanyName();
             trip.setUser(userRepository.findByCompanyName
                             (companyName)
@@ -114,29 +121,43 @@ public class TripService implements ITripService {
         return tripRepository.findByUserIdAndStartDateGreaterThan(userId, LocalDate.now());
     }
 
-
-    public void notifyIfCurrentParticipantChanged(List<Trip> trips, List<TripAvailabilityRequest> tripAvailabilities) {
+    @Transactional
+    public void notifyIfCurrentParticipantChanged(List<TripAvailabilityRequest> trips, List<TripAvailabilityRequest> tripAvailabilities, Long tourOperatorId) {
         StringJoiner emailMessage = new StringJoiner("\n\n");
-        IntStream.range(0, trips.size())
-                .forEach(i -> {
-                    Trip trip = trips.get(i);
-                    TripAvailabilityRequest tripAvailability = tripAvailabilities.get(i);
-                    int participant = trip.getCurrentParticipantCount();
-                    int participantAfterChanged = tripAvailability.getCurrentParticipantCount();
-                    if ((participant != participantAfterChanged)) {
-                        String message = "Liczba wolnych miejsc w wycieczce \"" + trip.getTitle() + "\" została zmieniona. "
-                                + "Poprzednia liczba wolnych miejsc: " + participant + ", aktualna: " + participantAfterChanged + ".";
-
-                        trip.setCurrentParticipantCount(participantAfterChanged);
-                        tripRepository.save(trip);
-                        emailMessage.add(message);
-                    }
-                });
-        ReservationHistory reservationHistory = new ReservationHistory();
-
-
-
+        List <Trip> updatedTrips;
+        updatedTrips = updateTripsAndCollectAvailabilityChanges(trips, tripAvailabilities, emailMessage);
+        emailService.sendNotificationEmailBasedOnUserRole(updatedTrips, emailMessage, tourOperatorId);
+        reservationService.createReservationHistoryWithNotification(emailMessage, updatedTrips);
     }
+
+
+    private List<Trip> updateTripsAndCollectAvailabilityChanges(List<TripAvailabilityRequest> trips, List<TripAvailabilityRequest> tripAvailabilities, StringJoiner emailMessage) {
+        List <Trip> updatedTrips = new ArrayList<>();
+
+        if (trips.size()==tripAvailabilities.size()) {
+            IntStream.range(0, trips.size())
+                    .forEach(i -> {
+                        TripAvailabilityRequest trip = trips.get(i);
+                        TripAvailabilityRequest tripAvailability = tripAvailabilities.get(i);
+                        int participant = trip.getCurrentParticipantCount();
+                        int participantAfterChanged = tripAvailability.getCurrentParticipantCount();
+                        if (participant != participantAfterChanged) {
+                            Trip fetchedTrip = findById(trip.getTripId());
+                            String message = emailService.generateEmailMessage(fetchedTrip, participant, participantAfterChanged);
+                            fetchedTrip.setCurrentParticipantCount(participantAfterChanged);
+                            tripRepository.save(fetchedTrip);
+                            updatedTrips.add(fetchedTrip);
+                            emailMessage.add(message);
+                        }
+                    });
+        }
+        else {
+            throw new IllegalArgumentException("The number of trips and availability entries must be the same.");
+        }
+        return updatedTrips;
+    }
+
+
 
 
 }

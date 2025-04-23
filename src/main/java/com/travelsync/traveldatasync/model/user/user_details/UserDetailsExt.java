@@ -26,7 +26,7 @@ public class UserDetailsExt implements UserDetails {
                 .id(user.getId())
                 .email(user.getEmail())
                 .password(user.getPassword())
-                .authorities(List.of(new SimpleGrantedAuthority(user.getRole())))
+                .authorities(List.of(new SimpleGrantedAuthority(user.getRole().toString())))
                 .build();
     }
     @Override

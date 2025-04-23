@@ -1,6 +1,8 @@
 package com.travelsync.traveldatasync.model.user;
 
+import com.travelsync.traveldatasync.model.user.mapper.UserMapper;
 import com.travelsync.traveldatasync.model.user.request.AddUserRequest;
+import com.travelsync.traveldatasync.model.user.response.UserCompanyResponseDto;
 import com.travelsync.traveldatasync.model.user.response.UserResponseDto;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
@@ -11,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,6 +23,7 @@ public class UserService implements IUserService{
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
+    private final UserMapper userMapper;
 
 
     @Override
@@ -38,20 +42,17 @@ public class UserService implements IUserService{
                 .phoneNumber(addUserRequest.getPhoneNumber())
                 .email(addUserRequest.getEmail())
                 .password(passwordEncoder.encode(addUserRequest.getPassword()))
-                .role("TOUR-OPERATOR")
+                .role(UserRole.TOUR_OPERATOR)
                 .build();
     }
     @Override
-    public UserResponseDto convertToDto(User user) {
-        UserResponseDto userDto = modelMapper.map(user, UserResponseDto.class);
-        return userDto;
-    }
+    public List<UserCompanyResponseDto> findAllCompanyNames() {
+        List<User> allUsers = userRepository.findAll();
+        List<User> tourOperators = allUsers.stream()
+                .filter(user -> user.getRole() == UserRole.TOUR_OPERATOR)
+                .collect(Collectors.toUnmodifiableList());
 
-    @Override
-    public List<String> findAllCompanyNames() {
-        List<User> users = userRepository.findAll();
-        List<String> companyNames = users.stream().map(User:: getCompanyName).collect(Collectors.toUnmodifiableList());
-        return companyNames;
+        return userMapper.convertToUserCompanyDtos(tourOperators);
     }
 
     @Override

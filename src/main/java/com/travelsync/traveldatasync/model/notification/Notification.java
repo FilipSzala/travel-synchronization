@@ -1,21 +1,21 @@
 package com.travelsync.traveldatasync.model.notification;
-
 import com.travelsync.traveldatasync.model.notification.notification_status.NotificationStatus;
 import com.travelsync.traveldatasync.model.notification.notification_type.NotificationType;
 import com.travelsync.traveldatasync.model.reservation_history.ReservationHistory;
 import com.travelsync.traveldatasync.model.user.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Setter
+@Getter
 public class Notification {
     @Id
     @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne
+    @ManyToOne (cascade = {CascadeType.MERGE,CascadeType.PERSIST})
     @JoinColumn (name = "user_id",
                     foreignKey = @ForeignKey (
                             name = "reservation_history_user_fk"
@@ -31,4 +31,5 @@ public class Notification {
     private NotificationStatus notificationStatus;
     @Enumerated
     private NotificationType notificationType;
+
 }
